@@ -7,23 +7,26 @@ interface TypewriterProps {
 }
 
 export const Typewriter: React.FC<TypewriterProps> = ({ text, speed = 20, onComplete }) => {
-  const [displayedText, setDisplayedText] = useState('');
-  const indexRef = useRef(0);
+  const [displayLength, setDisplayLength] = useState(0);
   const timerRef = useRef<number | null>(null);
 
+  // Reset when text changes
   useEffect(() => {
-    setDisplayedText('');
-    indexRef.current = 0;
+    setDisplayLength(0);
     if (timerRef.current) clearInterval(timerRef.current);
 
+    const startTime = Date.now();
+    
     timerRef.current = window.setInterval(() => {
-      if (indexRef.current < text.length) {
-        setDisplayedText((prev) => prev + text.charAt(indexRef.current));
-        indexRef.current++;
-      } else {
-        if (timerRef.current) clearInterval(timerRef.current);
-        if (onComplete) onComplete();
-      }
+      setDisplayLength((prev) => {
+        if (prev < text.length) {
+          return prev + 1;
+        } else {
+          if (timerRef.current) clearInterval(timerRef.current);
+          if (onComplete) onComplete();
+          return prev;
+        }
+      });
     }, speed);
 
     return () => {
@@ -31,5 +34,5 @@ export const Typewriter: React.FC<TypewriterProps> = ({ text, speed = 20, onComp
     };
   }, [text, speed, onComplete]);
 
-  return <span>{displayedText}</span>;
+  return <span>{text.substring(0, displayLength)}</span>;
 };

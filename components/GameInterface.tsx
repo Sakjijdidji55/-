@@ -14,7 +14,7 @@ interface GameInterfaceProps {
 
 const SakuraFlower: React.FC<{ className?: string }> = ({ className }) => (
   <svg viewBox="0 0 512 512" className={className} fill="currentColor">
-    <path d="M256 512C256 512 256 256 256 256C256 256 512 256 512 256C512 256 256 256 256 256C256 256 256 0 256 0C256 0 256 256 256 256C256 256 0 256 0 256C0 256 256 256 256 256C256 256 256 512 256 512Z" fillOpacity="0" />
+    <path d="M256 512C256 512 256 256 256 256C256 256 512 256 512 256C512 256 256 256 256 256C256 256 0 256 0 256C0 256 256 256 256 256C256 256 256 512 256 512Z" fillOpacity="0" />
     <path d="M369.1 444.2C365.9 446.7 362.4 448.9 358.7 450.7C344.1 458 327.6 462.1 310.2 462.1C261.6 462.1 222.2 422.7 222.2 374.1C222.2 354 228.9 335.6 240.3 321L256 302.7L271.7 321C283.1 335.6 289.8 354 289.8 374.1C289.8 398.3 280.2 420.2 264.4 436C288.9 447 316.7 453.1 346 453.1C388.7 453.1 428.1 438.6 459 414.2L459.8 413.6L369.1 444.2Z" opacity="0.6"/>
     <path d="M256 208.6C251.4 214 247.3 219.9 243.6 226.2C232.8 244.7 226.6 266.3 226.6 289.4C226.6 353.1 278.3 404.8 341.9 404.8C365.1 404.8 386.6 398.6 405.1 387.8C411.4 384.1 417.3 380 422.7 375.4L256 208.6Z"/>
     <path d="M142.9 67.8C146.1 65.3 149.6 63.1 153.3 61.3C167.9 54 184.4 49.9 201.8 49.9C250.4 49.9 289.8 89.3 289.8 137.9C289.8 158 283.1 176.4 271.7 191L256 209.3L240.3 191C228.9 176.4 222.2 158 222.2 137.9C222.2 113.7 231.8 91.8 247.6 76C223.1 65 195.3 58.9 166 58.9C123.3 58.9 83.9 73.4 53 97.8L52.2 98.4L142.9 67.8Z" opacity="0.6"/>
@@ -87,21 +87,24 @@ export const GameInterface: React.FC<GameInterfaceProps> = ({
   onSave,
   onMainMenu
 }) => {
+  // State reset logic: Track the current segment ID to detect changes
+  const [currentSegmentId, setCurrentSegmentId] = useState<string | undefined>(segment?.id);
+  
   const [lineIndex, setLineIndex] = useState(0);
   const [isTextTyping, setIsTextTyping] = useState(true);
   const [showChoices, setShowChoices] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [hideUI, setHideUI] = useState(false); // New state for hiding UI
+  const [hideUI, setHideUI] = useState(false);
 
-  useEffect(() => {
-    if (segment) {
-      setLineIndex(0);
-      setIsTextTyping(true);
-      setShowChoices(false);
-    }
-  }, [segment]);
+  // Synchronous state adjustment pattern
+  // If prop 'segment' changes, we must reset lineIndex IMMEDIATELY before render
+  if (segment && segment.id !== currentSegmentId) {
+    setCurrentSegmentId(segment.id);
+    setLineIndex(0);
+    setIsTextTyping(true);
+    setShowChoices(false);
+  }
 
-  // Listen for CTRL key to hide UI
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Control') setHideUI(true);
@@ -119,7 +122,9 @@ export const GameInterface: React.FC<GameInterfaceProps> = ({
 
   if (!segment || !segment.lines) return <div className="w-full h-screen bg-sky-50"></div>;
 
-  const currentLine: DialogueLine = segment.lines[lineIndex] || { speaker: "Error", text: "...", emotion: "neutral" };
+  // Safely access lines. If mismatch occurred during transition, fallback to empty.
+  // Using segment.lines[lineIndex] is now safe because lineIndex resets when segment.id changes.
+  const currentLine: DialogueLine = segment.lines[lineIndex] || { speaker: "...", text: "...", emotion: "neutral" };
   const isLastLine = lineIndex >= segment.lines.length - 1;
 
   const handleTextComplete = () => {
@@ -169,22 +174,19 @@ export const GameInterface: React.FC<GameInterfaceProps> = ({
         ) : (
           <div className={`w-full h-full bg-${themeColor}-100 animate-pulse`} />
         )}
-        {/* Hide overlay when hiding UI for clearer view */}
         <div className={`absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/10 pointer-events-none transition-opacity duration-300 ${hideUI ? 'opacity-0' : 'opacity-100'}`} />
-        
-        {/* Hide flowers too? Maybe keep them as they are part of aesthetic */}
         <div className={`absolute top-0 left-0 w-64 h-64 text-${themeColor}-300/30 pointer-events-none transition-opacity duration-300 ${hideUI ? 'opacity-0' : 'opacity-100'}`}>
            <SakuraFlower className="w-full h-full transform -translate-x-16 -translate-y-16 rotate-45" />
         </div>
       </div>
 
-      {/* UI Container - Fades out when hideUI is true */}
+      {/* UI Container */}
       <div className={`absolute inset-0 z-10 transition-opacity duration-300 ${hideUI ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
         
         {/* Monologue Layer */}
         {currentLine.monologue && !isLoading && (
           <div 
-            key={`mono-${lineIndex}`} 
+            key={`mono-${segment.id}-${lineIndex}`} 
             className="absolute top-24 left-8 md:left-20 right-8 md:right-1/3 z-10 pointer-events-none animate-slide-up"
           >
             <div className="bg-black/40 backdrop-blur-md p-6 rounded-tr-3xl rounded-bl-3xl border-l-4 border-white/30 shadow-lg">
@@ -262,7 +264,6 @@ export const GameInterface: React.FC<GameInterfaceProps> = ({
           {/* Text Box */}
           <div className="w-full max-w-6xl mx-auto relative mt-4">
             
-            {/* Animated Character Sprite */}
             <CharacterSprite 
                 speaker={currentLine.speaker} 
                 emotion={currentLine.emotion} 
@@ -271,7 +272,7 @@ export const GameInterface: React.FC<GameInterfaceProps> = ({
             />
 
             <div 
-              key={`${segment.visualDescription}-${lineIndex}`} 
+              key={`${segment.id}-${lineIndex}`} /* Stable key based on ID + Index */
               className={`
                 relative bg-slate-900/80 backdrop-blur-xl border-2 animate-slide-up
                 ${isFemaleProtagonist ? 'border-pink-300/50' : 'border-sky-300/50'}
@@ -302,8 +303,6 @@ export const GameInterface: React.FC<GameInterfaceProps> = ({
           </div>
         </div>
       </div>
-      
-      {/* Hint overlay for Ctrl key */}
       {!hideUI && (
         <div className="absolute bottom-1 right-1 text-white/30 text-[10px] p-1">
           Hold CTRL to hide UI
