@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { StorySegment, Choice, Protagonist, Emotion, DialogueLine } from '../types';
 import { Typewriter } from './Typewriter';
 
@@ -97,7 +97,6 @@ export const GameInterface: React.FC<GameInterfaceProps> = ({
   const [hideUI, setHideUI] = useState(false);
 
   // Synchronous state adjustment pattern
-  // If prop 'segment' changes, we must reset lineIndex IMMEDIATELY before render
   if (segment && segment.id !== currentSegmentId) {
     setCurrentSegmentId(segment.id);
     setLineIndex(0);
@@ -122,17 +121,16 @@ export const GameInterface: React.FC<GameInterfaceProps> = ({
 
   if (!segment || !segment.lines) return <div className="w-full h-screen bg-sky-50"></div>;
 
-  // Safely access lines. If mismatch occurred during transition, fallback to empty.
-  // Using segment.lines[lineIndex] is now safe because lineIndex resets when segment.id changes.
   const currentLine: DialogueLine = segment.lines[lineIndex] || { speaker: "...", text: "...", emotion: "neutral" };
   const isLastLine = lineIndex >= segment.lines.length - 1;
 
-  const handleTextComplete = () => {
+  // Wrap in useCallback to maintain stable identity
+  const handleTextComplete = useCallback(() => {
     setIsTextTyping(false);
     if (isLastLine) {
       setShowChoices(true);
     }
-  };
+  }, [isLastLine]);
 
   const handleInteraction = () => {
     if (showChoices || hideUI) return; 
@@ -272,7 +270,7 @@ export const GameInterface: React.FC<GameInterfaceProps> = ({
             />
 
             <div 
-              key={`${segment.id}-${lineIndex}`} /* Stable key based on ID + Index */
+              key={`${segment.id}-${lineIndex}`} 
               className={`
                 relative bg-slate-900/80 backdrop-blur-xl border-2 animate-slide-up
                 ${isFemaleProtagonist ? 'border-pink-300/50' : 'border-sky-300/50'}

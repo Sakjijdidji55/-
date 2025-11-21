@@ -9,6 +9,12 @@ interface TypewriterProps {
 export const Typewriter: React.FC<TypewriterProps> = ({ text, speed = 20, onComplete }) => {
   const [displayLength, setDisplayLength] = useState(0);
   const timerRef = useRef<number | null>(null);
+  const onCompleteRef = useRef(onComplete);
+
+  // Keep ref synced with latest callback
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   // Reset when text changes
   useEffect(() => {
@@ -23,7 +29,8 @@ export const Typewriter: React.FC<TypewriterProps> = ({ text, speed = 20, onComp
           return prev + 1;
         } else {
           if (timerRef.current) clearInterval(timerRef.current);
-          if (onComplete) onComplete();
+          // Use the ref to call the callback without triggering effect cleanup
+          if (onCompleteRef.current) onCompleteRef.current();
           return prev;
         }
       });
@@ -32,7 +39,8 @@ export const Typewriter: React.FC<TypewriterProps> = ({ text, speed = 20, onComp
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [text, speed, onComplete]);
+    // Removed onComplete from dependencies to prevent restart on parent re-render
+  }, [text, speed]); 
 
   return <span>{text.substring(0, displayLength)}</span>;
 };

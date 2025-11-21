@@ -15,7 +15,7 @@ const App: React.FC = () => {
     currentSegment: null,
     currentImage: null,
     preludeQueue: [],
-    scriptMap: {}, // Changed from Queue to Map
+    scriptMap: {}, 
     customApiKey: null,
     customBaseUrl: null,
     customImageBaseUrl: null,
@@ -44,8 +44,6 @@ const App: React.FC = () => {
   useEffect(() => {
     if (state.status === GameState.PLAYING && !state.isLoading && state.currentSegment) {
       try {
-        // Note: We generally don't want to save the entire scriptMap to local storage if it's huge
-        // But for now, we dump state. Ideally, we just save the current scene ID for scripts.
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
         setHasLocalSave(true);
       } catch (e) {
@@ -70,6 +68,9 @@ const App: React.FC = () => {
   const handleSaveGame = () => {
     try {
       if (state.isLoading || state.error) return;
+      
+      // Construct a save object that includes the modified scriptMap (which has the generated images)
+      // The entire state is serializable
       const saveData = JSON.stringify(state, null, 2);
       const blob = new Blob([saveData], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -111,10 +112,9 @@ const App: React.FC = () => {
           throw new Error("Invalid Script Format: Missing 'lines' array");
         }
 
-        // Convert List to Map for Graph Navigation
+        // Convert List to Map
         const scriptMap: Record<string, StorySegment> = {};
         scriptDataList.forEach((seg, index) => {
-          // If no ID is provided in JSON, generate one (though graph nav requires IDs)
           const id = seg.id || `auto_id_${index}`;
           seg.id = id;
           scriptMap[id] = seg;
@@ -122,19 +122,26 @@ const App: React.FC = () => {
 
         setState(prev => ({ ...prev, isLoading: true }));
         
-        // Start with the first segment in the list (entry point)
         const firstSegment = scriptDataList[0];
         
-        const image = await generateSceneImage(firstSegment.visualDescription);
+        // Check if image exists in script, else generate and save it
+        let image = firstSegment.imageUrl;
+        if (!image) {
+           image = await generateSceneImage(firstSegment.visualDescription);
+           // SAVE the generated image back to the segment in the map
+           if (firstSegment.id) {
+             scriptMap[firstSegment.id].imageUrl = image; 
+           }
+        }
 
         setState(prev => ({
           ...prev,
           status: GameState.PLAYING,
           protagonist: Protagonist.MALE, 
           currentSegment: firstSegment,
-          currentImage: image,
+          currentImage: image || null,
           history: [{ segment: firstSegment }],
-          scriptMap: scriptMap, // Store the full script graph
+          scriptMap: scriptMap, 
           preludeQueue: [],
           isLoading: false,
           error: null
@@ -199,18 +206,37 @@ const App: React.FC = () => {
 
     try {
       // PRIORITY 1: Script Map (Graph Navigation)
-      // Check if the choice has a nextSceneId and we have a loaded script
       if (choice.nextSceneId && state.scriptMap && state.scriptMap[choice.nextSceneId]) {
           const nextSegment = state.scriptMap[choice.nextSceneId];
-          const nextImage = await generateSceneImage(nextSegment.visualDescription);
           
-          setState(prev => ({
-              ...prev,
-              currentSegment: nextSegment,
-              currentImage: nextImage,
-              history: [...updatedHistory, { segment: nextSegment }],
-              isLoading: false
-          }));
+          // Logic: Check for cached image, if none, generate and save
+          let nextImage = nextSegment.imageUrl;
+          if (!nextImage) {
+             nextImage = await generateSceneImage(nextSegment.visualDescription);
+             // Persist image to scriptMap
+             const updatedScriptMap = { ...state.scriptMap };
+             if (nextSegment.id) {
+                updatedScriptMap[nextSegment.id].imageUrl = nextImage;
+             }
+             
+             setState(prev => ({
+                ...prev,
+                scriptMap: updatedScriptMap, // Save map with new image
+                currentSegment: nextSegment,
+                currentImage: nextImage || null,
+                history: [...updatedHistory, { segment: nextSegment }],
+                isLoading: false
+             }));
+          } else {
+             // Use existing image
+             setState(prev => ({
+                ...prev,
+                currentSegment: nextSegment,
+                currentImage: nextImage || null,
+                history: [...updatedHistory, { segment: nextSegment }],
+                isLoading: false
+             }));
+          }
           return;
       }
 
@@ -218,6 +244,10 @@ const App: React.FC = () => {
       if (state.preludeQueue && state.preludeQueue.length > 0) {
           const nextSegment = state.preludeQueue[0];
           const remainingQueue = state.preludeQueue.slice(1);
+          
+          // For linear queues, we don't persist images back to the original static list usually,
+          // but if we wanted to support saving the generated prelude images, we'd need to modify the queue in state.
+          // For now, let's just generate.
           const nextImage = await generateSceneImage(nextSegment.visualDescription);
 
           setState(prev => ({
@@ -246,6 +276,8 @@ const App: React.FC = () => {
       }
 
       const nextImage = await generateSceneImage(nextSegment.visualDescription);
+      // For infinite mode, we save the image to the current segment instance in history
+      nextSegment.imageUrl = nextImage;
 
       setState(prev => ({
         ...prev,

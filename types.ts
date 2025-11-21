@@ -14,7 +14,7 @@ export interface Choice {
   id: string;
   text: string;
   type: 'action' | 'dialogue' | 'deduction' | 'continue';
-  nextSceneId?: string; // The ID of the target scene if this choice is selected
+  nextSceneId?: string; 
 }
 
 export type Emotion = 'neutral' | 'happy' | 'angry' | 'sad' | 'surprised' | 'determined' | 'fear';
@@ -27,8 +27,9 @@ export interface DialogueLine {
 }
 
 export interface StorySegment {
-  id?: string; // Unique ID for the scene (Required for Script Mode)
+  id?: string; 
   visualDescription: string; 
+  imageUrl?: string; // Store the generated image URL/Base64 here
   lines: DialogueLine[];
   choices: Choice[];
   isEnding?: boolean;
@@ -47,14 +48,12 @@ export interface AppState {
   currentSegment: StorySegment | null;
   currentImage: string | null;
   preludeQueue: StorySegment[]; 
-  
-  // Changed from linear Queue to ID-based Map for branching scripts
   scriptMap: Record<string, StorySegment>; 
   
   // Configuration
   customApiKey: string | null;
   customBaseUrl: string | null;
-  customImageBaseUrl: string | null; // Dedicated URL for image generation
+  customImageBaseUrl: string | null; 
   customModelName: string | null; 
   customImageModelName: string | null; 
 
