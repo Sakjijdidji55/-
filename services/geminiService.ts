@@ -10,10 +10,10 @@ if (!apiKey) {
 
 const ai = new GoogleGenAI({ apiKey: apiKey || 'dummy_key' });
 
-// Character Consistency Prompts - DEFINED ONCE, USED EVERYWHERE
-const CHAR_DESC_MALE = "1boy, solo, male protagonist Kaelen, 23 years old, young handsome ex-soldier, short black hair, sharp blue eyes, resolute expression, wearing black tactical jacket and cargo pants, cool anime style, detailed face.";
-const CHAR_DESC_FEMALE = "1girl, solo, female protagonist Elara, 20 years old, detective lolita, silver long hair in twin-tails, black ribbon, gothic lolita detective dress with lace, cute but serious face, holding a magnifying glass or monocle, anime style, detailed eyes.";
-const CHAR_DESC_COUPLE = "1boy and 1girl, Kaelen (black hair tactical jacket) standing next to Elara (silver hair gothic lolita dress), anime style, masterpiece.";
+// Character Consistency Prompts - Enhanced for Visual Memorability
+const CHAR_DESC_MALE = "1boy, solo, male protagonist Kaelen, 23 years old, young handsome ex-soldier, short messy black hair, sharp blue eyes, visible scar on neck, wearing a torn white tuxedo with tactical gear equipped over it, holding a futuristic pistol, resolute expression, dynamic pose, anime style, detailed face, cinematic lighting.";
+const CHAR_DESC_FEMALE = "1girl, solo, female protagonist Elara, 20 years old, genius detective lolita, long silver hair in twin-tails with red ribbons, black gothic dress with white lace, wearing a golden monocle on one eye, holding a magnifying glass or data pad, cute but arrogant expression, anime style, masterpiece, highly detailed.";
+const CHAR_DESC_COUPLE = "1boy and 1girl, Kaelen (black hair, tactical tuxedo, protective stance) standing back-to-back with Elara (silver hair, gothic dress, analyzing data), battlefield wedding ruin background, anime style, Makoto Shinkai style, dramatic lighting.";
 
 // Retry helper
 async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Promise<T> {
@@ -34,29 +34,33 @@ const SYSTEM_INSTRUCTION = `
 语言：必须完全使用中文 (Chinese)。
 艺术风格：明亮、多彩、精致的日本动漫风格 (Makoto Shinkai style)。
 
-主角：
-1. 凯伦 (Kaelen): 退役军人，坚毅、理性。
-2. 艾拉拉 (Elara): 侦探萝莉，智慧、傲娇。
+**核心指令：剧情连贯性 (Absolute Continuity)**
+目前玩家反馈剧情有跳跃感。为了解决这个问题，你必须严格遵守以下**连贯性法则**：
 
-你的核心任务：
-1. **提供长篇沉浸式体验**：目标游玩长度为 **30-50个回合**。
-2. **增强环境描写与沉浸感**：
-   - 不要只写动作，要描写**光影、声音、气味、温度**。例如："空气中弥漫着电路烧焦的刺鼻气味"、"全息霓虹灯在破碎的玻璃上折射出诡异的光"。
-   - **内心活动 (Monologue)**：必须反映角色对当前局势的深层思考或情感波动，而不仅仅是吐槽。
-3. **保证剧情连贯性 (严禁跳跃)**：
-   - 如果场景发生变化，必须描写**移动的过程**（走过走廊、推开大门、躲入掩体）。
-   - 每一个新片段必须紧密承接上一个片段的结尾。
+1.  **禁止瞬移 (No Teleportation)**：
+    *   如果主角从A点移动到B点，**必须**描写移动的过程（走廊的脚步声、电梯的下降感、街道的风）。
+    *   绝对不能上一句话还在婚礼大厅，下一句话就突然出现在地下室。
 
-剧情节奏控制：
-   - [第1-30回合] 开端：婚礼危机。重点描写突发事件的混乱感和视觉冲击。
-   - [第30-50回合] 发展：深入调查。节奏放缓，侧重于环境探索和线索分析。
-   - [第50-80回合] 转折：背叛与真相。
-   - [第80+回合] 高潮与结局。
+2.  **动作衔接 (Action Chaining)**：
+    *   你生成的**第一句话**，必须是对玩家上一个选择的**直接物理反馈**。
+    *   例如：玩家选择"躲在柱子后"，你的回复必须以"我迅速滑步闪身到大理石柱后方..."开头。
 
-输出限制：
-- 剧情文本 (narrative) 控制在 3-6 句话。句子之间要有逻辑连接词。
+3.  **环境连续性 (Environmental Permanence)**：
+    *   之前提到的物品、伤痕、天气必须保持一致。
+
+**主角设定：**
+1. **凯伦 (Kaelen)**: 沉默寡言的退役军人。即使在混乱中也保持战术冷静。
+2. **艾拉拉 (Elara)**: 毒舌傲娇的天才侦探。喜欢用隐喻和嘲讽来掩饰紧张。
+
+**剧情节奏控制：**
+   - [第1-10回合] **逃亡与磨合**：婚礼现场->逃离路线->安全屋。重点描写两人如何从互不信任到被迫合作。
+   - [第11-30回合] **调查与潜行**：深入城市阴暗面。每一个线索的发现都必须有逻辑铺垫。
+   - [第31+回合] **真相与决战**。
+
+**输出限制：**
+- 剧情文本 (narrative) 长度放宽至 **4-8 句话**，以便你有足够的空间描写过渡细节。
 - **必须**填写 'emotion' 字段。
-- 确保 "visualDescription" 明确描述画面。
+- 确保 "visualDescription" 包含人物特征。
 - 输出格式必须是 JSON。
 `;
 
@@ -65,11 +69,11 @@ const STORY_SCHEMA = {
   properties: {
     narrative: {
       type: Type.STRING,
-      description: "主要的对话或动作文本。增加感官细节（视觉/听觉/嗅觉）。"
+      description: "主要的对话或动作文本。第一句必须紧承上文，中间包含环境/动作过渡，最后引出新局面。"
     },
     monologue: {
       type: Type.STRING,
-      description: "角色的内心独白、环境氛围渲染或对局势的战术/逻辑分析。"
+      description: "角色的内心独白。用于补充当前场景的氛围或深层动机。"
     },
     speaker: {
       type: Type.STRING,
@@ -78,11 +82,11 @@ const STORY_SCHEMA = {
     emotion: {
       type: Type.STRING,
       enum: ['neutral', 'happy', 'angry', 'sad', 'surprised', 'determined', 'fear'],
-      description: "说话者当前的情感，用于控制立绘动画。"
+      description: "说话者当前的情感。"
     },
     visualDescription: {
       type: Type.STRING,
-      description: "场景描述提示词。"
+      description: "场景描述提示词。必须与当前剧情紧密相关。"
     },
     choices: {
       type: Type.ARRAY,
@@ -106,8 +110,8 @@ export function getPrelude(protagonist: Protagonist): StorySegment[] {
   const isMale = protagonist === Protagonist.MALE;
   
   const commonIntro: StorySegment = {
-    narrative: "Neovera，一座建立在旧世界废墟上的玻璃之城。在这里，天空被全息投影取代，永远维持着虚假的蔚蓝。繁华的表象下，数据流如静脉般在城市深处搏动。",
-    monologue: "公元2147年。人类为了生存，将灵魂出卖给了算法。而我们，不过是这巨大机器中微不足道的尘埃。",
+    narrative: "Neovera，这座建立在旧世界尸骸上的玻璃花园，今夜显得格外刺眼。全息天空为了庆祝联姻，被强制调成了虚假的完美蔚蓝，掩盖了那些在阴影中溃烂的数据伤痕。",
+    monologue: "公元2147年。这是一个连'自由意志'都可以被标价出售的时代。而我们这场盛大的婚礼，不过是财团之间的一笔交易。",
     speaker: "旁白",
     emotion: "neutral",
     visualDescription: "futuristic cyberpunk city Neovera, bright neon lights, glass skyscrapers, holographic sky, anime style, makoto shinkai style, wide angle, no characters",
@@ -115,43 +119,43 @@ export function getPrelude(protagonist: Protagonist): StorySegment[] {
   };
 
   const characterIntro: StorySegment = isMale ? {
-    narrative: "我叫凯伦。自从那场惨烈的边境战争结束后，我就试图忘记硝烟的味道。此刻，镜子里的男人穿着挺括的白色礼服，胸前的勋章被礼花遮挡，显得有些讽刺。",
-    monologue: "背上的伤疤还在阴雨天隐隐作痛。但我必须履行家族的契约，哪怕这意味着要在这个虚伪的舞台上扮演一个完美的傀儡。",
+    narrative: "我叫凯伦。在那场被称为'绞肉机'的边境战争后，我以为自己已经流干了所有的血。此刻，我对着镜子整理领结，这身昂贵的白色礼服让我觉得像是一具被精心装扮的尸体。",
+    monologue: "颈侧的旧伤疤在隐隐作痛……这是危险逼近的信号。这场婚礼，恐怕不会按彩排进行。",
     speaker: "凯伦",
     emotion: "determined",
-    visualDescription: "Kaelen looking at a mirror in a dressing room, wearing white tuxedo, young man 23 years old, black short hair, sharp eyes, anime style",
-    choices: [{ id: 'next2', text: '整理衣领', type: 'continue' }]
+    visualDescription: "Kaelen looking at a mirror in a dressing room, wearing white tuxedo, young man 23 years old, black short hair, visible scar on neck, sharp eyes, anime style",
+    choices: [{ id: 'next2', text: '检查隐藏的武器', type: 'continue' }]
   } : {
-    narrative: "我是艾拉拉。在这个充满谎言和数据的城市里，真相是唯一的奢侈品。我调整了一下头上的蕾丝发带，这身繁复的婚纱对我来说，就像是一件昂贵的伪装工具。",
-    monologue: "这场政治联姻背后肯定藏着什么。父亲最近神神秘秘的，而且……那些隐藏在城市网络暗处的数据流正在异常躁动。",
+    narrative: "我是艾拉拉。在这个充满谎言的城市里，我是唯一的'解题者'。我扶正了单片眼镜，这身繁复的蕾丝婚纱重得像是一副枷锁，但我需要它来掩护我的微型终端。",
+    monologue: "父亲留下的最后一条线索指向了今天的婚礼。虽然要和一个素未谋面的退伍大兵结婚很荒谬，但为了真相，我愿意入局。",
     speaker: "艾拉拉",
     emotion: "determined",
-    visualDescription: "Elara adjusting her hair ribbon, wearing a white wedding dress with gothic detective accessories, silver twin-tails, cute but serious, anime style",
-    choices: [{ id: 'next2', text: '检查随身装备', type: 'continue' }]
+    visualDescription: "Elara adjusting her hair ribbon, wearing a white wedding dress with gothic detective accessories, golden monocle, silver twin-tails, cute but serious, anime style",
+    choices: [{ id: 'next2', text: '激活数据扫描', type: 'continue' }]
   };
 
   const waitingScene: StorySegment = isMale ? {
-    narrative: "推开休息室的门，长廊尽头是通往圣堂的入口。两旁的守卫向我致敬，但他们的眼神游移不定。空气中弥漫着一股不易察觉的焦味，像是电路过载的前兆。",
-    monologue: "作为前军人，我的直觉在疯狂示警。这里太安静了，安静得像是一个精心布置的陷阱。",
+    narrative: "推开休息室的门，长廊尽头的空气中弥漫着一股极难察觉的臭氧味——那是高能电容过载的前兆。两旁的守卫眼神僵硬，就像是被黑客入侵的义体。",
+    monologue: "作为前特种兵的本能正在尖叫：这不是婚礼，这是刑场。",
     speaker: "凯伦",
     emotion: "fear",
-    visualDescription: "Kaelen walking down a futuristic luxury corridor, wearing white tuxedo, black hair, anime style",
+    visualDescription: "Kaelen walking down a futuristic luxury corridor, wearing white tuxedo, black hair, tense atmosphere, anime style",
     choices: [{ id: 'next3', text: '推开大门', type: 'continue' }]
   } : {
-    narrative: "走廊上的电子显示屏闪烁了一下，虽然只有一瞬间，但我捕捉到了。那是一串红色的乱码。我不动声色地握紧了藏在捧花里的微型扫描仪。",
-    monologue: "看来今天的婚礼不会那么无聊了。这种干扰频率……不像是普通的系统故障。",
+    narrative: "走廊墙壁上的全息广告闪烁了一瞬，那是摩斯电码：'猎杀开始'。我微微眯起眼睛，手指轻轻扣住捧花下的EMP发生器。",
+    monologue: "看来今天的'宾客'们，准备了一份不得了的贺礼啊。",
     speaker: "艾拉拉",
     emotion: "surprised",
-    visualDescription: "Elara walking down a futuristic luxury corridor, holding a bouquet, wearing wedding dress, silver hair, anime style",
+    visualDescription: "Elara walking down a futuristic luxury corridor, holding a bouquet, wearing wedding dress, golden monocle, silver hair, anime style",
     choices: [{ id: 'next3', text: '推开大门', type: 'continue' }]
   };
 
   const weddingScene: StorySegment = {
-    narrative: "大门缓缓开启，圣堂的穹顶下坐满了Neovera的名流。当我对上那一双眼睛时，世界仿佛静止了。那就是我的搭档……虽然此刻我们还只是名义上的陌生人。",
-    monologue: "就在神父张开双臂准备宣读誓词的那一刻，我听到了——那不是礼炮的声音，而是某种高能武器充能的蜂鸣声，尖锐得刺痛耳膜。",
+    narrative: "大门开启，圣咏声戛然而止。当我对上那一双眼睛时，世界仿佛静止。那个本该是我'伴侣'的人，眼神中藏着与我相同的警惕。那是属于猎人的眼神。",
+    monologue: "就在神父张开双臂的那一刻，头顶的彩绘玻璃发出了悲鸣。好戏开场了。",
     speaker: isMale ? "凯伦" : "艾拉拉",
     emotion: "neutral",
-    visualDescription: "A grand futuristic wedding hall, Kaelen and Elara standing opposite each other at the altar, looking at each other, holy atmosphere but tense, anime style",
+    visualDescription: "A grand futuristic wedding hall, Kaelen and Elara standing opposite each other at the altar, looking at each other intensely, holy atmosphere but tense, anime style",
     choices: [{ id: 'start_game', text: '仪式开始', type: 'continue' }]
   };
 
@@ -161,16 +165,18 @@ export function getPrelude(protagonist: Protagonist): StorySegment[] {
 export async function generateStoryStart(protagonist: Protagonist): Promise<StorySegment> {
   const prompt = `
     以 ${protagonist} 的视角开始故事。
-    场景：承接上一幕，婚礼现场。
-    突发事件：神父的话音未落，巨大的爆炸声突然震碎了头顶绚丽的彩绘玻璃。碎片如彩色的雨点般落下，烟尘四起。
+    场景：婚礼现场。
+    突发事件：神父的话音未落，巨大的爆炸震碎了穹顶。一群佩戴"虚空面具"的武装人员随着红烟突入。
     
     任务：
-    1. **细腻的环境描写**：描写爆炸的冲击波、破碎玻璃的声音、人群的尖叫、烟雾的味道。
-    2. **即时反应**：描写主角的第一反应（凯伦保护他人/艾拉拉寻找掩体并快速观察局势）。
-    3. **互动**：建立与另一位主角的第一次互动（眼神交流、拉手、或背靠背）。
-    4. **内心独白**：反映主角此刻的震惊以及迅速冷静下来的心理过程。
+    1. **极具张力的开场**：描写爆炸瞬间的视觉冲击（慢镜头感）。
+    2. **角色高光时刻**：
+       - 如果是凯伦：本能地挡在艾拉拉身前，从礼服下抽出武器，展现"守护者"的一面。
+       - 如果是艾拉拉：冷静地推测出敌人的来源，并利用环境（如扔出捧花干扰）制造机会，展现"智者"的一面。
+    3. **互动**：建立两人"背靠背"的信任雏形。
+    4. **必须**为每段话标记 'emotion'。
     
-    提供三个截然不同的应对选项 (Action/Deduction/Dialogue)。
+    提供三个截然不同的应对选项 (Action-暴力突破/Deduction-快速分析/Dialogue-指挥威慑)。
     
     请用中文回答。
   `;
@@ -197,11 +203,13 @@ export async function generateNextSegment(
   history: GameHistoryItem[], 
   lastChoice: string
 ): Promise<StorySegment> {
+  // Provide the last segment explicitly for context continuity
+  const lastSegment = history[history.length - 1].segment;
   const fullHistoryContext = history.map((h, index) => 
     `[第${index + 1}回合]
     Speaker: ${h.segment.speaker}
     Text: ${h.segment.narrative}
-    Location Context: ${h.segment.visualDescription}
+    Location: ${h.segment.visualDescription}
     Choice: ${h.choiceMade || '无'}`
   ).join('\n---\n');
 
@@ -209,9 +217,9 @@ export async function generateNextSegment(
   let pacingInstruction = "";
 
   if (turnCount < 8) {
-    pacingInstruction = "阶段：[开端铺垫]。描写环境的破坏和混乱。增加感官细节（烟雾、尖叫、警报声）。不要急于离开现场。";
+    pacingInstruction = "阶段：[开端铺垫]。混乱中建立羁绊。通过对话展示凯伦的'冷硬'和艾拉拉的'毒舌'。";
   } else if (turnCount < 35) {
-    pacingInstruction = "阶段：[深入调查]。掌握主动，发现线索。**如果涉及位置移动，必须详细描写移动的过程和沿途的景象。**";
+    pacingInstruction = "阶段：[深入调查]。逐渐揭开Neovera的阴暗面。**必须**描写移动过程中的环境细节（废弃的地铁站、流光溢彩的数据中心）。";
   } else {
     pacingInstruction = "阶段：[决战/高潮]。";
   }
@@ -221,17 +229,16 @@ export async function generateNextSegment(
     当前回合数: ${turnCount}
     剧情节奏: ${pacingInstruction}
     
-    历史:
-    ${fullHistoryContext}
+    **上一段剧情最后的场景**: "${lastSegment.visualDescription}"
+    **上一段剧情最后的文本**: "${lastSegment.narrative}"
+    **玩家的选择**: "${lastChoice}"
     
-    玩家选择: "${lastChoice}"
+    任务 (Critical Task):
+    1. **无缝衔接**: 你的第一句话必须直接描写玩家做出 "${lastChoice}" 后的直接动作后果。不能跳过动作过程。
+    2. **环境过渡**: 如果玩家选择了离开或移动，请花费 1-2 句话描写路途中的景象，不要直接瞬移到目的地。
+    3. **人设强化**: 凯伦关注战术，艾拉拉关注线索。
     
-    任务：
-    1. **承接上文**：根据玩家的选择，描写直接的后果。如果玩家选择了移动，请描写移动的过程，不要瞬移。
-    2. **环境渲染**：加入至少一处关于环境（光、声、味）的细腻描写。
-    3. **内心活动**：在 monologue 中展示角色对当前情况的战术判断或逻辑推理。
-    4. **推进剧情**：自然过渡到下一个微场景。
-    
+    请生成一段连贯、细腻的剧情（4-8句话）。
     请用中文回答。
   `;
 
@@ -268,8 +275,8 @@ export async function generateSceneImage(visualDescription: string): Promise<str
 
   const prompt = `
     (Best Quality), (Masterpiece), (Anime Style), (Makoto Shinkai Style).
-    **Composition Constraint**: Construct a single, coherent scene. Use a cinematic composition. DO NOT use split screens.
-    Highly detailed, vibrant colors, beautiful lighting.
+    **Composition Constraint**: Single cinematic shot. Dynamic angle. No split screens.
+    Highly detailed, vibrant colors, beautiful lighting, bloom effect, ray tracing.
     ${characterPrompt}
     Background/Scene Context: ${visualDescription}
   `;
