@@ -1,11 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { MainMenu } from './components/MainMenu';
 import { GameInterface } from './components/GameInterface';
-import { generateStoryStart, generateNextSegment, generateSceneImage, getPrelude } from './services/geminiService';
-import { AppState, GameState, Protagonist, Choice } from './types';
+import { generateStoryStart, generateNextSegment, generateSceneImage, getPrelude, updateConfig } from './services/geminiService';
+import { AppState, GameState, Protagonist, Choice, StorySegment } from './types';
 
 const LOCAL_STORAGE_KEY = 'echoes_autosave_v1';
+const API_CONFIG_STORAGE_KEY = 'echoes_api_config_v1';
 
 const App: React.FC = () => {
   const [state, setState] = useState<AppState>({
@@ -15,41 +15,63 @@ const App: React.FC = () => {
     currentSegment: null,
     currentImage: null,
     preludeQueue: [],
+    scriptQueue: [],
+    customApiKey: null,
+    customBaseUrl: null,
+    customModelName: null,
+    customImageModelName: null,
     isLoading: false,
     error: null
   });
 
   const [hasLocalSave, setHasLocalSave] = useState(false);
 
-  // Check for local save on mount
+  // Check for local save and API Config on mount
   useEffect(() => {
     const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (saved) {
-      setHasLocalSave(true);
+    if (saved) setHasLocalSave(true);
+    
+    try {
+      const savedConfigStr = localStorage.getItem(API_CONFIG_STORAGE_KEY);
+      if (savedConfigStr) {
+        const savedConfig = JSON.parse(savedConfigStr);
+        handleUpdateConfig(savedConfig);
+      }
+    } catch (e) {
+      console.warn("Failed to load saved config");
     }
   }, []);
 
-  // Auto-save whenever state changes significantly (Playing mode, not loading)
+  // Auto-save
   useEffect(() => {
     if (state.status === GameState.PLAYING && !state.isLoading && state.currentSegment) {
       try {
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
         setHasLocalSave(true);
       } catch (e) {
-        console.warn("Auto-save failed (possibly quota exceeded):", e);
+        console.warn("Auto-save failed:", e);
       }
     }
   }, [state]);
 
-  // Save game state to a downloadable JSON file (Manual Backup)
+  const handleUpdateConfig = (config: { apiKey?: string, baseUrl?: string, textModel?: string, imageModel?: string }) => {
+    localStorage.setItem(API_CONFIG_STORAGE_KEY, JSON.stringify(config));
+    updateConfig(config);
+    setState(prev => ({ 
+      ...prev, 
+      customApiKey: config.apiKey || null,
+      customBaseUrl: config.baseUrl || null,
+      customModelName: config.textModel || null,
+      customImageModelName: config.imageModel || null
+    }));
+  };
+
   const handleSaveGame = () => {
     try {
       if (state.isLoading || state.error) return;
-      
       const saveData = JSON.stringify(state, null, 2);
       const blob = new Blob([saveData], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
-      
       const link = document.createElement('a');
       link.href = url;
       const timestamp = new Date().toISOString().slice(0,19).replace(/:/g, "-");
@@ -57,30 +79,61 @@ const App: React.FC = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
-      console.log("Game exported successfully.");
     } catch (e) {
       console.error("Failed to export game:", e);
     }
   };
 
-  // Load game state from a user-uploaded JSON file
   const handleLoadGame = (file: File) => {
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
         const json = event.target?.result as string;
         const savedState = JSON.parse(json) as AppState;
-        
-        // Validate critical fields
-        if (!savedState.history || !savedState.status) {
-           throw new Error("Invalid save file format");
-        }
-
+        if (!savedState.history || !savedState.status) throw new Error("Invalid save file");
         setState({ ...savedState, isLoading: false, error: null });
       } catch (e) {
-        console.error("Failed to load game:", e);
-        setState(prev => ({ ...prev, error: "无法读取存档文件，格式可能损坏。" }));
+        setState(prev => ({ ...prev, error: "无法读取存档文件。" }));
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleImportScript = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const json = event.target?.result as string;
+        const scriptData = JSON.parse(json) as StorySegment[];
+        
+        if (!Array.isArray(scriptData) || scriptData.length === 0 || !scriptData[0].narrative) {
+          throw new Error("Invalid Script Format");
+        }
+
+        setState(prev => ({ ...prev, isLoading: true }));
+        
+        const firstSegment = scriptData[0];
+        const remainingScript = scriptData.slice(1);
+        
+        // Generate Image for the first scene of the script
+        const image = await generateSceneImage(firstSegment.visualDescription);
+
+        setState(prev => ({
+          ...prev,
+          status: GameState.PLAYING,
+          protagonist: Protagonist.MALE, // Default for script viewer
+          currentSegment: firstSegment,
+          currentImage: image,
+          history: [{ segment: firstSegment }],
+          scriptQueue: remainingScript, // Load the script queue
+          preludeQueue: [],
+          isLoading: false,
+          error: null
+        }));
+
+      } catch (e) {
+        console.error(e);
+        setState(prev => ({ ...prev, isLoading: false, error: "剧本格式错误或解析失败。" }));
       }
     };
     reader.readAsText(file);
@@ -89,36 +142,23 @@ const App: React.FC = () => {
   const handleContinueGame = () => {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) {
-        const savedState = JSON.parse(saved) as AppState;
-        setState(savedState);
-      }
+      if (saved) setState(JSON.parse(saved));
     } catch (e) {
-      console.error("Failed to continue game:", e);
       setState(prev => ({ ...prev, error: "无法读取自动存档。" }));
     }
   };
 
   const handleMainMenu = () => {
-    setState(prev => ({
-       ...prev,
-       status: GameState.MENU,
-       error: null,
-       isLoading: false
-    }));
+    setState(prev => ({ ...prev, status: GameState.MENU, error: null, isLoading: false }));
   };
 
   const handleStartGame = async (protagonist: Protagonist) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     try {
-      // Clear old save when starting new
       localStorage.removeItem(LOCAL_STORAGE_KEY);
-      
-      // Get fixed prelude segments
       const prelude = getPrelude(protagonist);
       const firstSegment = prelude[0];
       const remainingPrelude = prelude.slice(1);
-
       const image = await generateSceneImage(firstSegment.visualDescription);
 
       setState(prev => ({
@@ -129,21 +169,18 @@ const App: React.FC = () => {
         currentImage: image,
         history: [{ segment: firstSegment }],
         preludeQueue: remainingPrelude,
+        scriptQueue: [],
         isLoading: false
       }));
     } catch (error) {
       console.error(error);
-      setState(prev => ({ 
-        ...prev, 
-        isLoading: false, 
-        error: "连接不稳定，请重试。" 
-      }));
+      setState(prev => ({ ...prev, isLoading: false, error: "连接失败，请检查 API Key 或网络。" }));
     }
   };
 
   const handleChoiceSelected = async (choice: Choice) => {
     if (!state.protagonist) return;
-
+    
     const updatedHistory = [...state.history];
     if (state.currentSegment) {
         updatedHistory[updatedHistory.length - 1].choiceMade = choice.text;
@@ -152,7 +189,26 @@ const App: React.FC = () => {
     setState(prev => ({ ...prev, isLoading: true, history: updatedHistory, error: null }));
 
     try {
-      // 1. Check if there are segments left in the Prelude Queue
+      // PRIORITY 1: Imported Script Queue (Linear Playback)
+      if (state.scriptQueue && state.scriptQueue.length > 0) {
+         const nextSegment = state.scriptQueue[0];
+         const remainingScript = state.scriptQueue.slice(1);
+         
+         // Only generate image for script, use text from JSON directly
+         const nextImage = await generateSceneImage(nextSegment.visualDescription);
+
+         setState(prev => ({
+             ...prev,
+             currentSegment: nextSegment,
+             currentImage: nextImage,
+             scriptQueue: remainingScript,
+             history: [...updatedHistory, { segment: nextSegment }],
+             isLoading: false
+         }));
+         return;
+      }
+
+      // PRIORITY 2: Prelude Queue
       if (state.preludeQueue && state.preludeQueue.length > 0) {
           const nextSegment = state.preludeQueue[0];
           const remainingQueue = state.preludeQueue.slice(1);
@@ -169,32 +225,17 @@ const App: React.FC = () => {
           return;
       }
 
-      // 2. If Prelude just finished (queue empty, but we were in prelude), start AI Story
-      // We detect this by checking if the last choice was from the Prelude (usually 'type: continue' or specific ID)
-      // OR simply if we just exhausted the queue.
-      // A more robust way: If the current segment was the LAST prelude item.
-      // The last prelude item usually calls 'generateStoryStart'.
-      
+      // PRIORITY 3: AI Generation
       let nextSegment;
-      // If choice ID is 'start_game' (defined in prelude), we trigger the AI start
       if (choice.id === 'start_game') {
           nextSegment = await generateStoryStart(state.protagonist);
       } else {
-          // Normal AI progression
-          nextSegment = await generateNextSegment(
-            state.protagonist,
-            updatedHistory,
-            choice.text
-          );
+          nextSegment = await generateNextSegment(state.protagonist, updatedHistory, choice.text);
       }
 
       if (nextSegment.isEnding) {
         let nextStatus = GameState.GAME_OVER;
-        if (['true', 'good', 'normal'].includes(nextSegment.endingType || '')) {
-          nextStatus = GameState.VICTORY;
-        } else {
-          nextStatus = GameState.GAME_OVER;
-        }
+        if (['true', 'good', 'normal'].includes(nextSegment.endingType || '')) nextStatus = GameState.VICTORY;
         setState(prev => ({ ...prev, status: nextStatus }));
       }
 
@@ -210,30 +251,18 @@ const App: React.FC = () => {
 
     } catch (error) {
       console.error(error);
-      setState(prev => ({ 
-        ...prev, 
-        isLoading: false, 
-        error: "网络连接中断，请重新选择。" 
-      }));
+      setState(prev => ({ ...prev, isLoading: false, error: "请求失败，请检查 API 设置。" }));
     }
   };
 
-  // Helper to determine ending title and styling
   const getEndingDisplay = () => {
     const type = state.currentSegment?.endingType || 'normal';
     switch (type) {
-      case 'true':
-        return { title: '✨ 真结局 (True Ending) ✨', color: 'text-yellow-400 bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 to-orange-500' };
-      case 'good':
-        return { title: '🎉 好结局 (Good Ending)', color: 'text-green-500' };
-      case 'normal':
-        return { title: '📜 普通结局 (Normal Ending)', color: 'text-slate-600' };
-      case 'bad':
-        return { title: '💔 坏结局 (Bad Ending)', color: 'text-red-500' };
-      case 'dead':
-        return { title: '💀 死亡 (DEAD END)', color: 'text-red-800' };
-      default:
-        return { title: '结局', color: 'text-slate-600' };
+      case 'true': return { title: '✨ 真结局 (True Ending) ✨', color: 'text-yellow-500' };
+      case 'good': return { title: '🎉 好结局 (Good Ending)', color: 'text-green-500' };
+      case 'bad': return { title: '💔 坏结局 (Bad Ending)', color: 'text-red-500' };
+      case 'dead': return { title: '💀 死亡 (DEAD END)', color: 'text-red-800' };
+      default: return { title: '结局', color: 'text-slate-600' };
     }
   };
 
@@ -252,7 +281,9 @@ const App: React.FC = () => {
         <MainMenu 
           onStart={handleStartGame} 
           onLoad={handleLoadGame}
+          onImportScript={handleImportScript}
           onContinue={handleContinueGame}
+          onUpdateConfig={handleUpdateConfig}
           hasLocalSave={hasLocalSave}
           isLoading={state.isLoading} 
         />
@@ -280,18 +311,8 @@ const App: React.FC = () => {
                 {state.currentSegment?.narrative || "故事结束。"}
               </p>
               <div className="flex gap-4 justify-center">
-                <button 
-                  onClick={() => window.location.reload()}
-                  className="px-8 py-3 bg-gradient-to-r from-sky-400 to-pink-400 text-white font-bold rounded-full hover:scale-105 transition-transform shadow-lg"
-                >
-                  重新开始
-                </button>
-                <button 
-                  onClick={handleMainMenu}
-                  className="px-8 py-3 bg-slate-200 text-slate-600 font-bold rounded-full hover:bg-slate-300 transition-colors shadow-lg"
-                >
-                  返回主菜单
-                </button>
+                <button onClick={() => window.location.reload()} className="px-8 py-3 bg-sky-500 text-white font-bold rounded-full hover:scale-105 transition-transform shadow-lg">重新开始</button>
+                <button onClick={handleMainMenu} className="px-8 py-3 bg-slate-200 text-slate-600 font-bold rounded-full hover:bg-slate-300 transition-colors shadow-lg">返回主菜单</button>
               </div>
             </div>
          </div>

@@ -41,6 +41,14 @@ export interface AppState {
   currentSegment: StorySegment | null;
   currentImage: string | null;
   preludeQueue: StorySegment[]; // Queue for linear intro sequence
+  scriptQueue: StorySegment[]; // Queue for imported custom scripts
+  
+  // Configuration
+  customApiKey: string | null;
+  customBaseUrl: string | null;
+  customModelName: string | null; // Text model
+  customImageModelName: string | null; // Image model
+
   isLoading: boolean;
   error: string | null;
 }
