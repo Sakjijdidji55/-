@@ -1,3 +1,4 @@
+
 export enum Protagonist {
   MALE = '凯伦·凡斯 (Kaelen)',
   FEMALE = '艾拉拉·凡斯 (Elara)'
@@ -13,7 +14,7 @@ export enum GameState {
 export interface Choice {
   id: string;
   text: string;
-  type: 'action' | 'dialogue' | 'deduction';
+  type: 'action' | 'dialogue' | 'deduction' | 'continue';
 }
 
 export interface StorySegment {
@@ -37,6 +38,7 @@ export interface AppState {
   history: GameHistoryItem[];
   currentSegment: StorySegment | null;
   currentImage: string | null;
+  preludeQueue: StorySegment[]; // Queue for linear intro sequence
   isLoading: boolean;
   error: string | null;
 }

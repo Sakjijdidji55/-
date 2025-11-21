@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { MainMenu } from './components/MainMenu';
 import { GameInterface } from './components/GameInterface';
-import { generateStoryStart, generateNextSegment, generateSceneImage } from './services/geminiService';
+import { generateStoryStart, generateNextSegment, generateSceneImage, getPrelude } from './services/geminiService';
 import { AppState, GameState, Protagonist, Choice } from './types';
 
 const LOCAL_STORAGE_KEY = 'echoes_autosave_v1';
@@ -13,6 +14,7 @@ const App: React.FC = () => {
     history: [],
     currentSegment: null,
     currentImage: null,
+    preludeQueue: [],
     isLoading: false,
     error: null
   });
@@ -70,7 +72,7 @@ const App: React.FC = () => {
         const json = event.target?.result as string;
         const savedState = JSON.parse(json) as AppState;
         
-        // Validate critical fields mostly match
+        // Validate critical fields
         if (!savedState.history || !savedState.status) {
            throw new Error("Invalid save file format");
         }
@@ -112,16 +114,21 @@ const App: React.FC = () => {
       // Clear old save when starting new
       localStorage.removeItem(LOCAL_STORAGE_KEY);
       
-      const startSegment = await generateStoryStart(protagonist);
-      const image = await generateSceneImage(startSegment.visualDescription);
+      // Get fixed prelude segments
+      const prelude = getPrelude(protagonist);
+      const firstSegment = prelude[0];
+      const remainingPrelude = prelude.slice(1);
+
+      const image = await generateSceneImage(firstSegment.visualDescription);
 
       setState(prev => ({
         ...prev,
         status: GameState.PLAYING,
         protagonist,
-        currentSegment: startSegment,
+        currentSegment: firstSegment,
         currentImage: image,
-        history: [{ segment: startSegment }],
+        history: [{ segment: firstSegment }],
+        preludeQueue: remainingPrelude,
         isLoading: false
       }));
     } catch (error) {
@@ -135,19 +142,51 @@ const App: React.FC = () => {
   };
 
   const handleChoiceSelected = async (choice: Choice) => {
-    if (!state.protagonist || !state.currentSegment) return;
+    if (!state.protagonist) return;
 
     const updatedHistory = [...state.history];
-    updatedHistory[updatedHistory.length - 1].choiceMade = choice.text;
+    if (state.currentSegment) {
+        updatedHistory[updatedHistory.length - 1].choiceMade = choice.text;
+    }
 
     setState(prev => ({ ...prev, isLoading: true, history: updatedHistory, error: null }));
 
     try {
-      const nextSegment = await generateNextSegment(
-        state.protagonist,
-        updatedHistory,
-        choice.text
-      );
+      // 1. Check if there are segments left in the Prelude Queue
+      if (state.preludeQueue && state.preludeQueue.length > 0) {
+          const nextSegment = state.preludeQueue[0];
+          const remainingQueue = state.preludeQueue.slice(1);
+          const nextImage = await generateSceneImage(nextSegment.visualDescription);
+
+          setState(prev => ({
+              ...prev,
+              currentSegment: nextSegment,
+              currentImage: nextImage,
+              preludeQueue: remainingQueue,
+              history: [...updatedHistory, { segment: nextSegment }],
+              isLoading: false
+          }));
+          return;
+      }
+
+      // 2. If Prelude just finished (queue empty, but we were in prelude), start AI Story
+      // We detect this by checking if the last choice was from the Prelude (usually 'type: continue' or specific ID)
+      // OR simply if we just exhausted the queue.
+      // A more robust way: If the current segment was the LAST prelude item.
+      // The last prelude item usually calls 'generateStoryStart'.
+      
+      let nextSegment;
+      // If choice ID is 'start_game' (defined in prelude), we trigger the AI start
+      if (choice.id === 'start_game') {
+          nextSegment = await generateStoryStart(state.protagonist);
+      } else {
+          // Normal AI progression
+          nextSegment = await generateNextSegment(
+            state.protagonist,
+            updatedHistory,
+            choice.text
+          );
+      }
 
       if (nextSegment.isEnding) {
         let nextStatus = GameState.GAME_OVER;
@@ -165,7 +204,7 @@ const App: React.FC = () => {
         ...prev,
         currentSegment: nextSegment,
         currentImage: nextImage,
-        history: [...prev.history, { segment: nextSegment }],
+        history: [...updatedHistory, { segment: nextSegment }],
         isLoading: false
       }));
 

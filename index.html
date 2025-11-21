@@ -31,6 +31,14 @@
       .animate-pop-in {
         animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
       }
+      /* Slide Up Entrance Animation for Dialogue Box */
+      @keyframes slideUp {
+        from { transform: translateY(30px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+      .animate-slide-up {
+        animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
     </style>
   <script type="importmap">
 {
