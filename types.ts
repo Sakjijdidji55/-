@@ -14,16 +14,22 @@ export interface Choice {
   id: string;
   text: string;
   type: 'action' | 'dialogue' | 'deduction' | 'continue';
+  nextSceneId?: string; // The ID of the target scene if this choice is selected
 }
 
 export type Emotion = 'neutral' | 'happy' | 'angry' | 'sad' | 'surprised' | 'determined' | 'fear';
 
+export interface DialogueLine {
+  speaker: string;
+  text: string;
+  emotion: Emotion;
+  monologue?: string; 
+}
+
 export interface StorySegment {
-  narrative: string; // Main dialogue or action text (Bottom box)
-  monologue?: string; // Internal thoughts or atmosphere (Floating text)
-  speaker: string; // Name of speaker or "Narrator"
-  emotion?: Emotion; // Emotion for sprite animation
-  visualDescription: string; // Prompt for image generation
+  id?: string; // Unique ID for the scene (Required for Script Mode)
+  visualDescription: string; 
+  lines: DialogueLine[];
   choices: Choice[];
   isEnding?: boolean;
   endingType?: 'true' | 'good' | 'normal' | 'bad' | 'dead';
@@ -40,14 +46,17 @@ export interface AppState {
   history: GameHistoryItem[];
   currentSegment: StorySegment | null;
   currentImage: string | null;
-  preludeQueue: StorySegment[]; // Queue for linear intro sequence
-  scriptQueue: StorySegment[]; // Queue for imported custom scripts
+  preludeQueue: StorySegment[]; 
+  
+  // Changed from linear Queue to ID-based Map for branching scripts
+  scriptMap: Record<string, StorySegment>; 
   
   // Configuration
   customApiKey: string | null;
   customBaseUrl: string | null;
-  customModelName: string | null; // Text model
-  customImageModelName: string | null; // Image model
+  customImageBaseUrl: string | null; // Dedicated URL for image generation
+  customModelName: string | null; 
+  customImageModelName: string | null; 
 
   isLoading: boolean;
   error: string | null;

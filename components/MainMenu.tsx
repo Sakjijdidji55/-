@@ -6,7 +6,7 @@ interface MainMenuProps {
   onLoad: (file: File) => void;
   onImportScript: (file: File) => void;
   onContinue: () => void;
-  onUpdateConfig: (config: { apiKey?: string, baseUrl?: string, textModel?: string, imageModel?: string }) => void;
+  onUpdateConfig: (config: { apiKey?: string, baseUrl?: string, imageBaseUrl?: string, textModel?: string, imageModel?: string }) => void;
   hasLocalSave: boolean;
   isLoading: boolean;
 }
@@ -26,6 +26,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   // Settings Form State
   const [tempApiKey, setTempApiKey] = useState("");
   const [tempBaseUrl, setTempBaseUrl] = useState("");
+  const [tempImageBaseUrl, setTempImageBaseUrl] = useState("");
   const [tempTextModel, setTempTextModel] = useState("deepseek-ai/DeepSeek-V3");
   const [tempImageModel, setTempImageModel] = useState("black-forest-labs/FLUX.1-schnell");
 
@@ -49,6 +50,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
     onUpdateConfig({
       apiKey: tempApiKey.trim() || undefined,
       baseUrl: tempBaseUrl.trim() || undefined,
+      imageBaseUrl: tempImageBaseUrl.trim() || undefined,
       textModel: tempTextModel.trim() || undefined,
       imageModel: tempImageModel.trim() || undefined
     });
@@ -90,12 +92,12 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             <h3 className="text-2xl font-black mb-4 text-slate-800">⚙️ 自定义 API 设置</h3>
             <p className="text-xs text-slate-500 mb-4">
               支持 Google Gemini 或 OpenAI 兼容接口 (如 SiliconFlow)。
-              <br/>如果不填 API Address，则默认使用内置 Google SDK。
+              <br/>如果不填 URL，则默认使用内置 Google SDK。
             </p>
             
             <div className="space-y-3 text-sm">
               <div>
-                <label className="block font-bold text-slate-600 mb-1">API Address (Base URL)</label>
+                <label className="block font-bold text-slate-600 mb-1">Text API Address (Base URL)</label>
                 <input 
                   type="text" 
                   placeholder="https://api.siliconflow.cn/v1/chat/completions" 
@@ -103,6 +105,18 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                   value={tempBaseUrl}
                   onChange={(e) => setTempBaseUrl(e.target.value)}
                 />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-600 mb-1">Image API Address (Optional)</label>
+                <input 
+                  type="text" 
+                  placeholder="https://api.siliconflow.cn/v1/images/generations" 
+                  className="w-full p-2 border rounded-lg bg-slate-50 focus:border-sky-400 outline-none"
+                  value={tempImageBaseUrl}
+                  onChange={(e) => setTempImageBaseUrl(e.target.value)}
+                />
+                <p className="text-[10px] text-slate-400 mt-1">留空则自动根据 Text API 推断。</p>
               </div>
 
               <div>

@@ -15,9 +15,10 @@ const App: React.FC = () => {
     currentSegment: null,
     currentImage: null,
     preludeQueue: [],
-    scriptQueue: [],
+    scriptMap: {}, // Changed from Queue to Map
     customApiKey: null,
     customBaseUrl: null,
+    customImageBaseUrl: null,
     customModelName: null,
     customImageModelName: null,
     isLoading: false,
@@ -26,11 +27,9 @@ const App: React.FC = () => {
 
   const [hasLocalSave, setHasLocalSave] = useState(false);
 
-  // Check for local save and API Config on mount
   useEffect(() => {
     const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (saved) setHasLocalSave(true);
-    
     try {
       const savedConfigStr = localStorage.getItem(API_CONFIG_STORAGE_KEY);
       if (savedConfigStr) {
@@ -42,10 +41,11 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Auto-save
   useEffect(() => {
     if (state.status === GameState.PLAYING && !state.isLoading && state.currentSegment) {
       try {
+        // Note: We generally don't want to save the entire scriptMap to local storage if it's huge
+        // But for now, we dump state. Ideally, we just save the current scene ID for scripts.
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
         setHasLocalSave(true);
       } catch (e) {
@@ -54,13 +54,14 @@ const App: React.FC = () => {
     }
   }, [state]);
 
-  const handleUpdateConfig = (config: { apiKey?: string, baseUrl?: string, textModel?: string, imageModel?: string }) => {
+  const handleUpdateConfig = (config: { apiKey?: string, baseUrl?: string, imageBaseUrl?: string, textModel?: string, imageModel?: string }) => {
     localStorage.setItem(API_CONFIG_STORAGE_KEY, JSON.stringify(config));
     updateConfig(config);
     setState(prev => ({ 
       ...prev, 
       customApiKey: config.apiKey || null,
       customBaseUrl: config.baseUrl || null,
+      customImageBaseUrl: config.imageBaseUrl || null,
       customModelName: config.textModel || null,
       customImageModelName: config.imageModel || null
     }));
@@ -104,28 +105,36 @@ const App: React.FC = () => {
     reader.onload = async (event) => {
       try {
         const json = event.target?.result as string;
-        const scriptData = JSON.parse(json) as StorySegment[];
+        const scriptDataList = JSON.parse(json) as StorySegment[];
         
-        if (!Array.isArray(scriptData) || scriptData.length === 0 || !scriptData[0].narrative) {
-          throw new Error("Invalid Script Format");
+        if (!Array.isArray(scriptDataList) || scriptDataList.length === 0 || !scriptDataList[0].lines) {
+          throw new Error("Invalid Script Format: Missing 'lines' array");
         }
+
+        // Convert List to Map for Graph Navigation
+        const scriptMap: Record<string, StorySegment> = {};
+        scriptDataList.forEach((seg, index) => {
+          // If no ID is provided in JSON, generate one (though graph nav requires IDs)
+          const id = seg.id || `auto_id_${index}`;
+          seg.id = id;
+          scriptMap[id] = seg;
+        });
 
         setState(prev => ({ ...prev, isLoading: true }));
         
-        const firstSegment = scriptData[0];
-        const remainingScript = scriptData.slice(1);
+        // Start with the first segment in the list (entry point)
+        const firstSegment = scriptDataList[0];
         
-        // Generate Image for the first scene of the script
         const image = await generateSceneImage(firstSegment.visualDescription);
 
         setState(prev => ({
           ...prev,
           status: GameState.PLAYING,
-          protagonist: Protagonist.MALE, // Default for script viewer
+          protagonist: Protagonist.MALE, 
           currentSegment: firstSegment,
           currentImage: image,
           history: [{ segment: firstSegment }],
-          scriptQueue: remainingScript, // Load the script queue
+          scriptMap: scriptMap, // Store the full script graph
           preludeQueue: [],
           isLoading: false,
           error: null
@@ -133,7 +142,7 @@ const App: React.FC = () => {
 
       } catch (e) {
         console.error(e);
-        setState(prev => ({ ...prev, isLoading: false, error: "剧本格式错误或解析失败。" }));
+        setState(prev => ({ ...prev, isLoading: false, error: "剧本格式错误: 需包含 'lines' 数组。" }));
       }
     };
     reader.readAsText(file);
@@ -169,7 +178,7 @@ const App: React.FC = () => {
         currentImage: image,
         history: [{ segment: firstSegment }],
         preludeQueue: remainingPrelude,
-        scriptQueue: [],
+        scriptMap: {},
         isLoading: false
       }));
     } catch (error) {
@@ -189,26 +198,23 @@ const App: React.FC = () => {
     setState(prev => ({ ...prev, isLoading: true, history: updatedHistory, error: null }));
 
     try {
-      // PRIORITY 1: Imported Script Queue (Linear Playback)
-      if (state.scriptQueue && state.scriptQueue.length > 0) {
-         const nextSegment = state.scriptQueue[0];
-         const remainingScript = state.scriptQueue.slice(1);
-         
-         // Only generate image for script, use text from JSON directly
-         const nextImage = await generateSceneImage(nextSegment.visualDescription);
-
-         setState(prev => ({
-             ...prev,
-             currentSegment: nextSegment,
-             currentImage: nextImage,
-             scriptQueue: remainingScript,
-             history: [...updatedHistory, { segment: nextSegment }],
-             isLoading: false
-         }));
-         return;
+      // PRIORITY 1: Script Map (Graph Navigation)
+      // Check if the choice has a nextSceneId and we have a loaded script
+      if (choice.nextSceneId && state.scriptMap && state.scriptMap[choice.nextSceneId]) {
+          const nextSegment = state.scriptMap[choice.nextSceneId];
+          const nextImage = await generateSceneImage(nextSegment.visualDescription);
+          
+          setState(prev => ({
+              ...prev,
+              currentSegment: nextSegment,
+              currentImage: nextImage,
+              history: [...updatedHistory, { segment: nextSegment }],
+              isLoading: false
+          }));
+          return;
       }
 
-      // PRIORITY 2: Prelude Queue
+      // PRIORITY 2: Prelude Queue (Linear)
       if (state.preludeQueue && state.preludeQueue.length > 0) {
           const nextSegment = state.preludeQueue[0];
           const remainingQueue = state.preludeQueue.slice(1);
@@ -225,7 +231,7 @@ const App: React.FC = () => {
           return;
       }
 
-      // PRIORITY 3: AI Generation
+      // PRIORITY 3: AI Generation (Infinite Mode)
       let nextSegment;
       if (choice.id === 'start_game') {
           nextSegment = await generateStoryStart(state.protagonist);
@@ -307,8 +313,8 @@ const App: React.FC = () => {
               {endingStyle.title}
             </h1>
             <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-xl border-4 border-sky-100">
-              <p className="text-slate-600 mb-8 text-lg font-medium leading-relaxed">
-                {state.currentSegment?.narrative || "故事结束。"}
+              <p className="text-slate-600 mb-8 text-lg font-medium leading-relaxed whitespace-pre-line">
+                {state.currentSegment?.lines?.map(l => l.text).join('\n') || "故事结束。"}
               </p>
               <div className="flex gap-4 justify-center">
                 <button onClick={() => window.location.reload()} className="px-8 py-3 bg-sky-500 text-white font-bold rounded-full hover:scale-105 transition-transform shadow-lg">重新开始</button>
