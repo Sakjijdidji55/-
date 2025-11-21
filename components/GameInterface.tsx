@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StorySegment, Choice, Protagonist } from '../types';
+import { StorySegment, Choice, Protagonist, Emotion } from '../types';
 import { Typewriter } from './Typewriter';
 
 interface GameInterfaceProps {
@@ -22,6 +22,100 @@ const SakuraFlower: React.FC<{ className?: string }> = ({ className }) => (
     <path d="M256 303.4C260.6 298 264.7 292.1 268.4 285.8C279.2 267.3 285.4 245.7 285.4 222.6C285.4 158.9 233.7 107.2 170.1 107.2C146.9 107.2 125.4 113.4 106.9 124.2C100.6 127.9 94.7 132 89.3 136.6L256 303.4Z"/>
   </svg>
 );
+
+// Character Sprite Component
+const CharacterSprite: React.FC<{ 
+  speaker: string, 
+  emotion?: Emotion, 
+  protagonist: Protagonist,
+  themeColor: string 
+}> = ({ speaker, emotion = 'neutral', protagonist, themeColor }) => {
+  
+  // Determine basic icon based on speaker
+  let baseIcon = "👤";
+  let isProtagonist = false;
+  
+  if (speaker.includes("凯伦") || speaker.includes("Kaelen")) {
+    baseIcon = "🛡️";
+    isProtagonist = true;
+  } else if (speaker.includes("艾拉拉") || speaker.includes("Elara")) {
+    baseIcon = "🎀";
+    isProtagonist = true;
+  } else if (speaker.includes("旁白")) {
+    return null; // No sprite for narrator
+  }
+
+  // Determine Animation and Emotion Bubble
+  let animClass = "animate-breath";
+  let emotionBubble = null;
+
+  switch (emotion) {
+    case 'happy':
+      animClass = "animate-bounce-quick";
+      emotionBubble = "✨";
+      break;
+    case 'angry':
+      animClass = "animate-shake";
+      emotionBubble = "💢";
+      break;
+    case 'surprised':
+      animClass = "animate-bounce-quick";
+      emotionBubble = "❗";
+      break;
+    case 'sad':
+      animClass = "animate-breath grayscale-[0.5]";
+      emotionBubble = "💧";
+      break;
+    case 'determined':
+      animClass = "animate-pulse-glow";
+      emotionBubble = "🔥";
+      break;
+    case 'fear':
+      animClass = "animate-shake";
+      emotionBubble = "😨";
+      break;
+    default:
+      animClass = "animate-breath";
+      break;
+  }
+
+  // If the speaker is NOT the current POV character, maybe fade them slightly?
+  // But here we just show whoever is speaking.
+  
+  return (
+    <div className={`absolute -top-20 left-0 md:left-6 z-40 flex items-end ${animClass}`}>
+      {/* Sprite Container */}
+      <div className={`
+        w-28 h-28 rounded-full border-4 border-white shadow-2xl 
+        bg-gradient-to-br from-${themeColor}-400 to-${themeColor}-600
+        flex items-center justify-center text-6xl transform translate-y-8 z-10 relative overflow-visible
+      `}>
+        {/* Main Icon */}
+        <span className="filter drop-shadow-md select-none">{baseIcon}</span>
+        
+        {/* Gloss */}
+        <div className="absolute top-0 left-0 w-full h-1/2 bg-white/30 rounded-t-full pointer-events-none"></div>
+        
+        {/* Emotion Bubble (Floating) */}
+        {emotionBubble && (
+          <div className="absolute -top-4 -right-4 bg-white rounded-full w-10 h-10 flex items-center justify-center border-2 border-slate-200 shadow-md animate-bounce">
+             <span className="text-2xl">{emotionBubble}</span>
+          </div>
+        )}
+      </div>
+      
+      {/* Name Label */}
+      <div className={`
+        absolute bottom-0 left-20 px-8 py-2 rounded-r-xl rounded-tl-xl shadow-lg mb-8 ml-4
+        bg-white/90 border-l-4 border-${themeColor}-500 backdrop-blur-md
+      `}>
+        <span className={`text-${themeColor}-600 font-black text-lg tracking-wide uppercase`}>
+          {speaker}
+        </span>
+      </div>
+    </div>
+  );
+};
 
 export const GameInterface: React.FC<GameInterfaceProps> = ({
   segment,
@@ -58,8 +152,6 @@ export const GameInterface: React.FC<GameInterfaceProps> = ({
   const isFemaleProtagonist = protagonist === Protagonist.FEMALE;
   const themeColor = isFemaleProtagonist ? 'pink' : 'sky';
   const themeGradient = isFemaleProtagonist ? 'from-pink-500 to-rose-400' : 'from-blue-500 to-cyan-400';
-  
-  const portraitIcon = isFemaleProtagonist ? '🎀' : '🛡️';
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-slate-900 select-none font-sans">
@@ -75,21 +167,18 @@ export const GameInterface: React.FC<GameInterfaceProps> = ({
         ) : (
           <div className={`w-full h-full bg-${themeColor}-100 animate-pulse`} />
         )}
-        {/* Vignette & Floral Borders */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/10 pointer-events-none" />
         
+        {/* Sakura Decorations */}
         <div className={`absolute top-0 left-0 w-64 h-64 text-${themeColor}-300/30 pointer-events-none`}>
            <SakuraFlower className="w-full h-full transform -translate-x-16 -translate-y-16 rotate-45" />
         </div>
         <div className={`absolute top-0 right-0 w-48 h-48 text-${themeColor}-200/20 pointer-events-none`}>
            <SakuraFlower className="w-full h-full transform translate-x-10 -translate-y-10 -rotate-12" />
         </div>
-        <div className={`absolute bottom-0 right-0 w-96 h-96 text-${themeColor}-400/10 pointer-events-none`}>
-           <SakuraFlower className="w-full h-full transform translate-x-32 translate-y-32 rotate-180" />
-        </div>
       </div>
 
-      {/* Monologue / Thoughts Floating Text Layer */}
+      {/* Monologue Layer */}
       {segment.monologue && !isLoading && (
         <div 
           key={`mono-${segment.narrative}`} 
@@ -103,7 +192,7 @@ export const GameInterface: React.FC<GameInterfaceProps> = ({
         </div>
       )}
 
-      {/* Loading Overlay */}
+      {/* Loading Layer */}
       {isLoading && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
            <div className="flex flex-col items-center animate-bounce bg-white/10 p-8 rounded-3xl backdrop-blur-md border border-white/20">
@@ -115,26 +204,16 @@ export const GameInterface: React.FC<GameInterfaceProps> = ({
         </div>
       )}
 
-      {/* Top Menu Bar */}
+      {/* Top Menu */}
       <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-start z-20">
         <div className="flex gap-3">
-            <button 
-              onClick={onMainMenu}
-              className="bg-white/20 hover:bg-white/40 text-white px-4 py-2 rounded-full backdrop-blur-md text-sm font-bold border border-white/30 transition-all shadow-sm"
-            >
+            <button onClick={onMainMenu} className="bg-white/20 hover:bg-white/40 text-white px-4 py-2 rounded-full backdrop-blur-md text-sm font-bold border border-white/30 transition-all shadow-sm">
               🏠 主菜单
             </button>
-            <button 
-              onClick={handleSaveClick}
-              className={`
-                px-4 py-2 rounded-full backdrop-blur-md text-sm font-bold border border-white/30 transition-all shadow-sm
-                ${isSaving ? 'bg-green-500/80 text-white' : 'bg-white/20 hover:bg-white/40 text-white'}
-              `}
-            >
+            <button onClick={handleSaveClick} className={`px-4 py-2 rounded-full backdrop-blur-md text-sm font-bold border border-white/30 transition-all shadow-sm ${isSaving ? 'bg-green-500/80 text-white' : 'bg-white/20 hover:bg-white/40 text-white'}`}>
               {isSaving ? '✔ 已保存' : '💾 保存'}
             </button>
         </div>
-        
         <div className="bg-white/20 backdrop-blur-md px-6 py-2 rounded-full border border-white/30 shadow-sm">
              <span className={`text-${themeColor}-100 font-bold text-sm uppercase tracking-wider flex items-center gap-2`}>
                <span>{isFemaleProtagonist ? '♥ 艾拉拉线' : '⚔ 凯伦线'}</span>
@@ -142,10 +221,10 @@ export const GameInterface: React.FC<GameInterfaceProps> = ({
         </div>
       </div>
 
-      {/* Main Interface Area */}
+      {/* Bottom Interface */}
       <div className="absolute bottom-0 left-0 w-full z-30 flex flex-col justify-end p-4 md:p-8 pb-6">
         
-        {/* Choices Container */}
+        {/* Choices */}
         {showChoices && !isLoading && (
           <div className="w-full max-w-4xl mx-auto mb-8 flex flex-col gap-4 animate-pop-in">
             {segment.choices.map((choice) => (
@@ -177,37 +256,19 @@ export const GameInterface: React.FC<GameInterfaceProps> = ({
           </div>
         )}
 
-        {/* Dialogue Box Container */}
+        {/* Text Box */}
         <div className="w-full max-w-6xl mx-auto relative mt-4">
            
-           {/* Character Portrait / Name Tag Cluster */}
-           <div className="absolute -top-16 left-0 md:left-4 z-40 flex items-end animate-slide-up">
-              {/* Portrait Circle */}
-              <div className={`
-                w-24 h-24 rounded-full border-4 border-white shadow-xl bg-gradient-to-br ${themeGradient}
-                flex items-center justify-center text-5xl transform translate-y-8 z-10 relative overflow-hidden
-              `}>
-                <span className="filter drop-shadow-lg transform hover:scale-110 transition-transform cursor-default">
-                  {portraitIcon}
-                </span>
-                {/* Shine effect */}
-                <div className="absolute top-0 left-0 w-full h-1/2 bg-white/20 rounded-t-full pointer-events-none"></div>
-              </div>
+           {/* Animated Character Sprite */}
+           <CharacterSprite 
+              speaker={segment.speaker} 
+              emotion={segment.emotion} 
+              protagonist={protagonist} 
+              themeColor={themeColor} 
+           />
 
-              {/* Name Label */}
-              <div className={`
-                px-10 py-2 rounded-t-2xl rounded-br-2xl shadow-lg transform -translate-x-4 mb-4
-                bg-gradient-to-r ${themeGradient}
-              `}>
-                <span className="text-white font-black text-xl tracking-wide uppercase shadow-black drop-shadow-md pl-4">
-                  {segment.speaker || "???"}
-                </span>
-              </div>
-           </div>
-
-           {/* Main Text Area */}
            <div 
-             key={segment.narrative} /* CRITICAL: Forces re-animation on text change */
+             key={segment.narrative} 
              onClick={handleSkip}
              className={`
                relative bg-slate-900/80 backdrop-blur-xl border-2 animate-slide-up
@@ -216,7 +277,6 @@ export const GameInterface: React.FC<GameInterfaceProps> = ({
                flex items-start pt-10
              `}
            >
-              {/* Decorative Corner Lines */}
               <div className={`absolute top-4 right-4 w-8 h-8 border-t-2 border-r-2 rounded-tr-xl border-${themeColor}-400/50`}></div>
               <div className={`absolute bottom-4 left-4 w-8 h-8 border-b-2 border-l-2 rounded-bl-xl border-${themeColor}-400/50`}></div>
 
@@ -235,7 +295,6 @@ export const GameInterface: React.FC<GameInterfaceProps> = ({
                 )}
               </div>
               
-              {/* Next Arrow */}
               {!showChoices && (
                  <div className="absolute bottom-4 right-8 animate-bounce">
                     <span className={`text-3xl text-${themeColor}-400 filter drop-shadow-glow`}>▼</span>

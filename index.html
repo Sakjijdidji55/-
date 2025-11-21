@@ -31,13 +31,48 @@
       .animate-pop-in {
         animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
       }
-      /* Slide Up Entrance Animation for Dialogue Box */
+      /* Slide Up Entrance Animation */
       @keyframes slideUp {
         from { transform: translateY(30px); opacity: 0; }
         to { transform: translateY(0); opacity: 1; }
       }
       .animate-slide-up {
         animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      /* Character Sprite Animations */
+      @keyframes breath {
+        0%, 100% { transform: scale(1) translateY(0); }
+        50% { transform: scale(1.02) translateY(-2px); }
+      }
+      .animate-breath {
+        animation: breath 3s ease-in-out infinite;
+      }
+
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px) rotate(-5deg); }
+        75% { transform: translateX(5px) rotate(5deg); }
+      }
+      .animate-shake {
+        animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+      }
+
+      @keyframes bounce-quick {
+        0%, 100% { transform: translateY(0); }
+        40% { transform: translateY(-15px); }
+        80% { transform: translateY(5px); }
+      }
+      .animate-bounce-quick {
+        animation: bounce-quick 0.5s ease-in-out;
+      }
+      
+      @keyframes pulse-glow {
+        0%, 100% { box-shadow: 0 0 0 0px rgba(255, 255, 255, 0.7); }
+        50% { box-shadow: 0 0 20px 10px rgba(255, 255, 255, 0); }
+      }
+      .animate-pulse-glow {
+        animation: pulse-glow 2s infinite;
       }
     </style>
   <script type="importmap">

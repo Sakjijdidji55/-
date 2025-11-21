@@ -1,4 +1,3 @@
-
 export enum Protagonist {
   MALE = '凯伦·凡斯 (Kaelen)',
   FEMALE = '艾拉拉·凡斯 (Elara)'
@@ -17,10 +16,13 @@ export interface Choice {
   type: 'action' | 'dialogue' | 'deduction' | 'continue';
 }
 
+export type Emotion = 'neutral' | 'happy' | 'angry' | 'sad' | 'surprised' | 'determined' | 'fear';
+
 export interface StorySegment {
   narrative: string; // Main dialogue or action text (Bottom box)
   monologue?: string; // Internal thoughts or atmosphere (Floating text)
   speaker: string; // Name of speaker or "Narrator"
+  emotion?: Emotion; // Emotion for sprite animation
   visualDescription: string; // Prompt for image generation
   choices: Choice[];
   isEnding?: boolean;
