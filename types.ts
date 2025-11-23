@@ -1,6 +1,6 @@
 export enum Protagonist {
-  MALE = '凯伦·凡斯 (Kaelen)',
-  FEMALE = '艾拉拉·凡斯 (Elara)'
+  MALE = '尤里乌斯 (Julius)',
+  FEMALE = '卡罗特 (Carrot)'
 }
 
 export enum GameState {

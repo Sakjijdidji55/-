@@ -164,14 +164,14 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 
       <div className="z-10 text-center mb-8 animate-pop-in">
         <h1 className="text-6xl md:text-8xl font-black title-font mb-2 text-transparent bg-clip-text bg-gradient-to-b from-sky-400 to-blue-600 drop-shadow-sm">
-          双境回响
+          THYTHM
         </h1>
         <h2 className="text-3xl md:text-5xl font-bold title-font mb-6 text-pink-500 drop-shadow-sm">
           Echoes of Dystopia
         </h2>
         <div className="bg-white/80 backdrop-blur-sm px-8 py-2 rounded-full inline-block shadow-sm border border-sky-100">
           <p className="text-slate-500 tracking-[0.3em] text-xs md:text-sm font-bold uppercase">
-            双视角 · 悬疑 · 恋爱
+            悬疑 · 恋爱
           </p>
         </div>
       </div>

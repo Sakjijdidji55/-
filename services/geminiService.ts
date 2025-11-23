@@ -39,12 +39,12 @@ export const updateConfig = (newConfig: { apiKey?: string; baseUrl?: string; ima
   initClient();
 };
 
-const CHAR_DESC_MALE = "1boy, solo, male protagonist Kaelen, 23 years old, young handsome ex-soldier, short messy black hair, sharp blue eyes, visible scar on neck, wearing a torn white tuxedo with tactical gear equipped over it, holding a futuristic pistol, resolute expression, dynamic pose, anime style, detailed face, cinematic lighting.";
-const CHAR_DESC_FEMALE = "1girl, solo, female protagonist Elara, 20 years old, genius detective lolita, long silver hair in twin-tails with red ribbons, black gothic dress with white lace, wearing a golden monocle on one eye, holding a magnifying glass or data pad, cute but arrogant expression, anime style, masterpiece, highly detailed.";
-const CHAR_DESC_COUPLE = "1boy and 1girl, Kaelen (black hair, tactical tuxedo, protective stance) standing back-to-back with Elara (silver hair, gothic dress, analyzing data), battlefield wedding ruin background, anime style, Makoto Shinkai style, dramatic lighting.";
+const CHAR_DESC_MALE = "1boy, solo, male protagonist Julius, 23 years old, young handsome ex-soldier, short messy black hair, sharp blue eyes, visible scar on neck, wearing a torn white tuxedo with tactical gear equipped over it, holding a futuristic pistol, resolute expression, dynamic pose, anime style, detailed face, cinematic lighting.";
+const CHAR_DESC_FEMALE = "1girl, solo, female protagonist Elara, 20 years old, genius detective loli with petite slender figure and flat-chested, long silvery-white twin-tails tied with glossy red satin ribbons (ribbons fluttering slightly, hair with soft volume and subtle shine), fair porcelain skin with a faint blush on cheeks, large round obsidian eyes with long dark lashes (sharp intelligent gaze, slightly narrowed in scrutiny), small upturned nose, pouty lips with a confident arrogant smirk, wearing an elegant black gothic lolita dress (floor-length tulle skirt with white lace frills, fitted corset with silver skull buttons, puffed sleeves with lace cuffs, black choker with a small ruby pendant), holding a vintage brass magnifying glass (with intricate engravings) in one hand and a sleek data pad (glowing holographic screen displaying case clues) in the other, standing on tiptoes slightly as if inspecting a clue, anime style, hyperdetailed outfit (lace texture, fabric folds, ribbon sheen), soft diffused lighting with warm accent lights, 8k resolution, masterpiece, Studio Ghibli meets Gothic Lolita aesthetics.";
+const CHAR_DESC_COUPLE = "1boy and 1girl, Julius (male protagonist Julius, 23 years old, young handsome ex-soldier, short messy black hair, sharp blue eyes, visible scar on neck, wearing a torn white tuxedo with tactical gear equipped over it, holding a futuristic pistol, resolute expression, dynamic pose, anime style, detailed face, cinematic lighting.) standing back-to-back with Carrot (female protagonist Elara, 20 years old, genius detective loli with petite slender figure and flat-chested, long silvery-white twin-tails tied with glossy red satin ribbons (ribbons fluttering slightly, hair with soft volume and subtle shine), fair porcelain skin with a faint blush on cheeks, large round obsidian eyes with long dark lashes (sharp intelligent gaze, slightly narrowed in scrutiny), small upturned nose, pouty lips with a confident arrogant smirk, wearing an elegant black gothic lolita dress (floor-length tulle skirt with white lace frills, fitted corset with silver skull buttons, puffed sleeves with lace cuffs, black choker with a small ruby pendant), holding a vintage brass magnifying glass (with intricate engravings) in one hand and a sleek data pad (glowing holographic screen displaying case clues) in the other, standing on tiptoes slightly as if inspecting a clue, anime style, hyperdetailed outfit (lace texture, fabric folds, ribbon sheen), soft diffused lighting with warm accent lights, 8k resolution, masterpiece, Studio Ghibli meets Gothic Lolita aesthetics.), battlefield wedding ruin background, anime style, Makoto Shinkai style, dramatic lighting.";
 
 const SYSTEM_INSTRUCTION_TEXT = `
-你是一个科幻悬疑视觉小说《双境回响》的剧本作家 (Scriptwriter)。
+你是一个科幻悬疑视觉小说《THYTHM》的剧本作家 (Scriptwriter)。
 语言：必须完全使用中文 (Chinese)。
 艺术风格：明亮、多彩、精致的日本动漫风格 (Makoto Shinkai style)。
 
@@ -58,8 +58,8 @@ const SYSTEM_INSTRUCTION_TEXT = `
 4.  **情感演出**：指定准确的 'emotion'。
 
 **主角设定：**
-1. **凯伦 (Kaelen)**: 沉默寡言的退役军人。
-2. **艾拉拉 (Elara)**: 毒舌傲娇的天才侦探。
+1. **尤里乌斯 (Julius)**: 沉默寡言的退役军人。
+2. **卡罗特 (Carrot)**: 毒舌傲娇的天才侦探。
 
 **输出格式：**
 返回符合 JSON Schema 的对象。
@@ -208,28 +208,28 @@ export function getPrelude(protagonist: Protagonist): StorySegment[] {
 
   const characterSegment: StorySegment = isMale ? {
     id: "prelude_1_male",
-    visualDescription: "Kaelen looking at a mirror, wearing white tuxedo, young man 23 years old, black short hair, visible scar, anime style",
+    visualDescription: "Julius looking at a mirror, wearing white tuxedo, young man 23 years old, black short hair, visible scar, anime style",
     lines: [
-      { speaker: "凯伦", text: "我叫凯伦。在那场被称为'绞肉机'的边境战争后，我以为自己已经流干了所有的血。", emotion: "neutral" },
-      { speaker: "凯伦", text: "此刻，我对着镜子整理领结。这身白色礼服，就像是裹尸布一样。", emotion: "determined", monologue: "颈侧的旧伤疤在隐隐作痛……这是危险逼近的信号。" }
+      { speaker: "尤里乌斯", text: "我叫尤里乌斯。在那场被称为'绞肉机'的边境战争后，我以为自己已经流干了所有的血。", emotion: "neutral" },
+      { speaker: "尤里乌斯", text: "此刻，我对着镜子整理领结。这身白色礼服，就像是裹尸布一样。", emotion: "determined", monologue: "颈侧的旧伤疤在隐隐作痛……这是危险逼近的信号。" }
     ],
     choices: [{ id: 'next2', text: '检查武器', type: 'continue' }]
   } : {
     id: "prelude_1_female",
-    visualDescription: "Elara adjusting hair ribbon, wedding dress, gothic detective accessories, golden monocle, silver twin-tails, anime style",
+    visualDescription: "Carrot adjusting hair ribbon, wedding dress, gothic detective accessories, golden monocle, silver twin-tails, anime style",
     lines: [
-      { speaker: "艾拉拉", text: "我是艾拉拉。在这个充满谎言的城市里，我是唯一的'解题者'。", emotion: "neutral" },
-      { speaker: "艾拉拉", text: "我扶正了单片眼镜。父亲留下的最后一条线索，就指向今天的婚礼。", emotion: "determined", monologue: "虽然这身婚纱很碍事，但它是完美的伪装。" }
+      { speaker: "卡罗特", text: "我是卡罗特。在这个充满谎言的城市里，我是唯一的'解题者'。", emotion: "neutral" },
+      { speaker: "卡罗特", text: "我扶正了单片眼镜。父亲留下的最后一条线索，就指向今天的婚礼。", emotion: "determined", monologue: "虽然这身婚纱很碍事，但它是完美的伪装。" }
     ],
     choices: [{ id: 'next2', text: '激活扫描', type: 'continue' }]
   };
 
   const weddingSegment: StorySegment = {
     id: "prelude_2",
-    visualDescription: "Grand futuristic wedding hall, Kaelen and Elara standing opposite, tense atmosphere, anime style",
+    visualDescription: "Grand futuristic wedding hall, Julius and Carrot standing opposite, tense atmosphere, anime style",
     lines: [
       { speaker: "旁白", text: "大门开启，圣咏声戛然而止。", emotion: "neutral" },
-      { speaker: isMale ? "凯伦" : "艾拉拉", text: "...", emotion: "neutral", monologue: "那个本该是我'伴侣'的人，眼神中藏着与我相同的警惕。" },
+      { speaker: isMale ? "尤里乌斯" : "卡罗特", text: "...", emotion: "neutral", monologue: "那个本该是我'伴侣'的人，眼神中藏着与我相同的警惕。" },
       { speaker: "神父", text: "在全息之神的见证下，你们将合二为一...", emotion: "neutral" },
       { speaker: "旁白", text: "就在神父张开双臂的那一刻，头顶的彩绘玻璃发出了悲鸣。", emotion: "fear" }
     ],
@@ -245,7 +245,7 @@ export async function generateStoryStart(protagonist: Protagonist): Promise<Stor
     场景: 婚礼现场。
     事件: 爆炸发生，武装人员突入。
     任务: 生成一段包含 8-12 句对话的剧本。
-    内容: 描写爆炸冲击 -> 主角反应(凯伦保护/艾拉拉分析) -> 两人简短互动 -> 敌人登场。
+    内容: 描写爆炸冲击 -> 主角反应(尤里乌斯保护/卡罗特分析) -> 两人简短互动 -> 敌人登场。
     提供三个选项 (Action/Deduction/Dialogue)。
     **必须**为场景分配 ID (如 'scene_start') 和选项 nextSceneId。
   `;
@@ -299,8 +299,8 @@ export async function generateNextSegment(
 
 export async function generateSceneImage(visualDescription: string): Promise<string> {
   let characterDesc = "";
-  const hasMale = visualDescription.includes("凯伦") || visualDescription.includes("Kaelen") || visualDescription.includes("男主");
-  const hasFemale = visualDescription.includes("艾拉拉") || visualDescription.includes("Elara") || visualDescription.includes("女主");
+  const hasMale = visualDescription.includes("尤里乌斯") || visualDescription.includes("Julius") || visualDescription.includes("男主");
+  const hasFemale = visualDescription.includes("卡罗特") || visualDescription.includes("Carrot") || visualDescription.includes("女主");
   if (hasMale && hasFemale) characterDesc = CHAR_DESC_COUPLE;
   else if (hasMale) characterDesc = CHAR_DESC_MALE;
   else if (hasFemale) characterDesc = CHAR_DESC_FEMALE;
